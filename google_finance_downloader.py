@@ -10,6 +10,7 @@ Pythonでgoogle financeから株価データをダウンロードするための
 import os
 import time
 import re
+import warnings
 from urllib.parse import quote_plus
 import ast
 import datetime
@@ -18,6 +19,79 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 from robobrowser import RoboBrowser
+
+
+class GoogleFinanceHistorical:
+    def __init__(self):
+        user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'
+        self.browser = RoboBrowser(timeout=10, parser="lxml", user_agent=user_agent)
+
+        # 個別銘柄のチャートページから株価データを取得するには、fw-uidが必要になる。
+        # google financeのトップページにて、fw-uidを取得する。
+        self.url_top = "https://www.google.com/finance"
+
+    def get_google_finance_historical(self, market_id="/m/0cl3bc5", period="5d", interval=60 * 60 * 24):
+        # 個別銘柄のチャートページから株価データを取得するには、fw-uidが必要になる。
+        # google financeのトップページにて、fw-uidを取得する。
+        browser = self.browser
+        browser.open(self.url_top)
+        # 検索フォームのei (fw-uid)を取得できるようにする。
+        form = browser.get_form()
+        template = "https://www.google.com/async/finance_wholepage_chart?ei={ei}&yv=3&async=mid_list:{symbolcode_encoded},period:{period},interval:{interval},extended:true,element_id:fw-uid_{ei}_1,_id:fw-uid_{ei}_1,_pms:s,_fmt:pc"
+        symbolcode_encoded = quote_plus(market_id)
+        url = template.format(
+            ei=form["ei"].value, symbolcode_encoded=symbolcode_encoded, period=period, interval=interval)
+        # 個別銘柄のチャートのデータを含むhtmlファイルを取得
+        browser.open(url)
+        txt = browser.response.text
+        self.txt = txt
+
+
+        # 正規表現を使い、株価データが記録されている部分を取り出す
+        for i, str_line in enumerate(txt.splitlines()):
+            if re.match("[0-9a-z]+;\[null", str_line):
+                # mark_start_data = str_line[:10]
+                row_to_skip = i
+
+        self.row_to_skip = row_to_skip
+        if row_to_skip != 5:
+            warnings.warn("api has changed: row_to_skip = {}".format(row_to_skip))
+
+        txt_data_list = txt.splitlines()[row_to_skip:]
+        self.txt_data_list = txt_data_list
+        if len(txt_data_list) != 23:
+            warnings.warn("api has changed: len(txt_data_list) = {}".format(len(txt_data_list)))
+
+        txt_data = "".join(txt_data_list)
+        txt_data = re.sub("[0-9a-z]+;", "", txt_data)
+        self.txt_data = txt_data
+        if txt_data[:5] == '\[null':
+            warnings.warn("api has changed: txt_data = {} ...".format(txt_data[:5]))
+
+        data_list = ast.literal_eval(txt_data.replace("null", "None"))
+        self.data_list = data_list
+        if not isinstance(data_list, list):
+            warnings.warn("type of data_list is: ".format(type(data_list)))
+
+        str_market_info = data_list[1][0][1][0][3][0][-1][1]
+        self.str_market_info = str_market_info
+        if not isinstance(str_market_info, str):
+            warnings.warn("type of str_market_info is: ".format(type(str_market_info)))
+
+        historical_price_list = ast.literal_eval(str_market_info)
+        self.historical_price_list_0 = historical_price_list
+        if len(historical_price_list) != 16:
+            warnings.warn("api has changed: len(historical_price_list) = {}".format(len(historical_price_list)))
+
+        historical_price_list = historical_price_list[3][0][0][0][0]
+        self.historical_price_list_1 = historical_price_list
+        df = pd.DataFrame(historical_price_list).iloc[:, [2, 5]]
+        df.columns = ["Close", "Timestamp"]
+
+        # タイムスタンプを現地時刻に変換する
+        df["Date"] = df.Timestamp.mul(60).apply(datetime.datetime.fromtimestamp)
+        df["Close"] = df.Close.apply(lambda x: x[0][0])
+        self.data = df.loc[:, ["Date", "Close", "Timestamp"]]
 
 
 def get_google_finance_market_id(stock_symbol="NASDAQ: GOOGL"):
