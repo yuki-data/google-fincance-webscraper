@@ -231,7 +231,9 @@ def download_multi_symbols(symbol_list=[7203, 9984], period="3Y", interval=60 * 
     for i in symbol_list:
         stock_symbol = "TYO: {symbol_code}".format(symbol_code=i)
         market_id = get_google_finance_market_id(stock_symbol)
-        df = get_google_finance_historical(market_id, period=period, interval=interval)
+        google = GoogleFinanceHistorical()
+        google.get_google_finance_historical(market_id, period=period, interval=interval)
+        df = google.data
         df["Symbol_Code"] = i
 
         filename = filename_tempplate.format(str_datetime_today=str_datetime_today, symbol_code=i)
