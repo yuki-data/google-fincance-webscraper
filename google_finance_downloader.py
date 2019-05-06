@@ -193,14 +193,14 @@ def download_multi_symbols(symbol_list=[7203, 9984], period="3Y", interval=60 * 
 if __name__ == "__main__":
     # Googleのmarket_idを取得する
     market_id_google = get_google_finance_market_id("NASDAQ: GOOG")
-    # Googleの株価データを取得する。過去5年間の日足の終値をpandas.Dataframeのデータで得る。
-    df_google_daily = get_google_finance_historical(market_id_google, period="5Y", interval=60 * 60 * 24)
-    # Googleの株価データを取得する。過去3日間の5分足の終値をpandas.Dataframeのデータで得る。
-    df_google_5minutes = get_google_finance_historical(market_id_google, period="3d", interval=60 * 5)
+    downloader = GoogleFinanceHistorical()
+
+    # Googleの株価データを取得する。過去3年間の日足の終値をpandas.Dataframeのデータで得る。
+    downloader.get_google_finance_historical(market_id_google, period="3Y", interval=60 * 60 * 24)
+    df_google_daily = downloader.data
 
     # トヨタ自動車の株価データを取得する(銘柄コード7203)
-    market_id = get_google_finance_market_id("TYO: 7203")
-    # 過去5年間の日足の終値
-    df_toyota_daily = get_google_finance_historical(market_id, period="5Y", interval=60 * 60 * 24)
-    # 過去5日間の5分足の終値
-    df_toyota_5minutes = get_google_finance_historical(market_id, period="5d", interval=60 * 5)
+    market_id_toyota = get_google_finance_market_id("TYO: 7203")
+    # 過去3年間の日足の終値
+    downloader.get_google_finance_historical(market_id_toyota, period="3Y", interval=60 * 60 * 24)
+    df_toyota_daily = downloader.data
