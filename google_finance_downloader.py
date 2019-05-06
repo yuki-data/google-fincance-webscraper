@@ -31,6 +31,31 @@ class GoogleFinanceHistorical:
         self.url_top = "https://www.google.com/finance"
 
     def get_google_finance_historical(self, market_id="/m/0cl3bc5", period="5d", interval=60 * 60 * 24):
+        """google financeから株価の終値を取得し、pandas.DataFrame形式のデータで返す。
+        Parameters
+        ----------
+        market_id:
+            google financeの個別銘柄の識別番号。どの市場のどの銘柄かを表すID。
+            人間が読んでも意味が分かり難いので、get_google_finance_market_idで番号を取得するとよい。
+        period:
+            株価データの取得期間を文字列で指定。1d, 5d, 1Y, 3Yなど。
+            '5d'は過去5日間のデータ、'3Y'は過去3年間のデータを取得する。
+            確認できている限りでは、日足では過去5年間、1分足では過去21日間、5分足では過去３ヶ月間のデータを取得できた。
+            この期間を過度に長くすると、データの取得に失敗する。
+        interval:
+            株価データのインターバルを整数で指定。単位は秒。
+            例えば、日足を取得したいなら60 * 60 * 24とし、5分足なら60 * 5
+            最小が60(1分足よりも短いインターバルの株価は取得できない)。
+        Returns
+        -------
+        df: pandas.DataFrame形式データ。
+            カラム名のDateは株価が付いたときの現地時刻、Closeは終値を表す。
+        備考
+        ----
+        google financeの株価チャートに表示される株価データ(終値)をweb scrapingして、
+        現地時刻と終値を正規表現を使って取得する。
+        もとのデータに、終値以外の価格が記録されていないため、OHLCVデータのうちClose(終値)のみしか取得できない。
+        """
         # 個別銘柄のチャートページから株価データを取得するには、fw-uidが必要になる。
         # google financeのトップページにて、fw-uidを取得する。
         browser = self.browser
